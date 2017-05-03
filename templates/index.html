@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+    {% if current_user.is_authenticated() %}
+    <h1>Welcome, {{ current_user.username }}!</h1>
+    <img src="{{url_for('static', filename='tickets.png')}}" />
+    {% else %}
+    <h1>Welcome, New User!</h1>
+    <p>Please <a href="{{ url_for('register') }}">Register</a> or <a href="{{ url_for('login') }}">Login</a>.</p>
+    {% endif %}
+{% endblock %}

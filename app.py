@@ -47,28 +47,25 @@ class LoginForm(Form):
     token = StringField('Token', validators=[Required()])
     submit = SubmitField('Login')
     
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET','POST'])
 def index():
-    if request.args.get('name') == "" or request.args.get('name') == None or request.args.get('phone') == "" or request.args.get('phone') == None:
+    if request.form['name'] == "" or request.form['name'] == None or request.form['phone'] == "" or request.form['phone'] == None:
         return render_template('index.html')
     else:
-        name = request.args.get('name')
-        phone = request.args.get('phone')
-        eventid = request.args.get('id')
+        name = request.form['name']
+        phone = request.form['phone']
+        eventid = request.form['event_id']
         token = randint(1000, 9999)
         session['name'] = name
         session['phone'] = phone
         session['token'] = token
+        session['eventid'] = eventid
         return redirect(url_for('two_factor_setup'))
 
 @app.route('/eventregisteration', methods=['GET', 'POST'])
 def eventregisteration():
     form = EventForm()
     if form.validate_on_submit():
-        #        e_id = Event.query.filter_by(eventname=form.eventname.data).first()
-        #if e_id is not None:
-        #    flash('Event already exists.')
-        #    return redirect(url_for('eventregisteration'))
         new_event = Event(eventname=form.eventname.data,
                           externalID=form.externalID.data)
         db.session.add(new_event)

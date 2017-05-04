@@ -25,11 +25,28 @@ bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 lm = LoginManager(app)
 
+class Event(UserMixin, db.Model):
+    """Event model."""
+    __tablename__ = 'events'
+    id = db.Column(db.Integer, primary_key=True)
+    eventname = db.Column(db.String(64), index=True)
+    externalID = db.Column(db.String(64))
+
+    def __init__(self, **kwargs):
+        super(Event, self).__init__(**kwargs)
+
+
+class EventForm(Form):
+    """Registration Form for an event"""
+    eventname = StringField('Name of Event', validators=[Required()])
+    externalID = StringField('Event ID', validators=[Required()])
+    submit = SubmitField('Register Event')
+
 class LoginForm(Form):
     """Login form."""
     token = StringField('Token', validators=[Required()])
     submit = SubmitField('Login')
-
+    
 @app.route('/', methods=['GET'])
 def index():
     if request.args.get('name') == "" or request.args.get('name') == None or request.args.get('phone') == "" or request.args.get('phone') == None:
@@ -37,11 +54,27 @@ def index():
     else:
         name = request.args.get('name')
         phone = request.args.get('phone')
+        eventid = request.args.get('id')
         token = randint(1000, 9999)
         session['name'] = name
         session['phone'] = phone
         session['token'] = token
         return redirect(url_for('two_factor_setup'))
+
+@app.route('/eventregisteration', methods=['GET', 'POST'])
+def eventregisteration():
+    form = EventForm()
+    if form.validate_on_submit():
+        #        e_id = Event.query.filter_by(eventname=form.eventname.data).first()
+        #if e_id is not None:
+        #    flash('Event already exists.')
+        #    return redirect(url_for('eventregisteration'))
+        new_event = Event(eventname=form.eventname.data,
+                          externalID=form.externalID.data)
+        db.session.add(new_event)
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('event.html', form=form)
 
 @app.route('/two-factor-setup')
 def two_factor_setup():
@@ -83,6 +116,9 @@ def login():
 @app.route('/ticket', methods=['GET', 'POST'])
 def ticket():
     return render_template('ticket.html')
+
+# create database
+db.create_all()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

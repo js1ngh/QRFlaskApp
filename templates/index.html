@@ -6,6 +6,6 @@
     <img src="{{url_for('static', filename='tickets.png')}}" />
     {% else %}
     <h1>Welcome, New User!</h1>
-    <p>Please <a href="{{ url_for('register') }}">Register</a> or <a href="{{ url_for('login') }}">Login</a>.</p>
+    <p>You must be a registered user for an event in order to proceed.</p>
     {% endif %}
 {% endblock %}

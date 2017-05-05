@@ -1,19 +1,14 @@
-import os
-import base64
+from random import randint
 from io import StringIO
 from flask import Flask, render_template, redirect, url_for, flash, session, \
-    abort, jsonify, request
-from werkzeug.security import generate_password_hash, check_password_hash
+        request
 from flask.ext.sqlalchemy import SQLAlchemy
-from flask.ext.login import LoginManager, UserMixin, login_user, logout_user, \
-    current_user
+from flask.ext.login import UserMixin
 from flask.ext.bootstrap import Bootstrap
 from flask.ext.wtf import Form
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import Required, Length, EqualTo
+from wtforms import StringField, SubmitField
+from wtforms.validators import Required
 from twilio.rest import Client # FOR SMS
-from random import randint
-import onetimepass
 import pyqrcode
 
 # create application instance
@@ -23,7 +18,6 @@ app.config.from_object('config')
 # initialize extensions
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
-lm = LoginManager(app)
 
 class Event(UserMixin, db.Model):
     """Event model."""
@@ -47,10 +41,11 @@ class LoginForm(Form):
     token = StringField('Token', validators=[Required()])
     submit = SubmitField('Login')
     
-@app.route('/', methods=['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    if request.form['name'] == "" or request.form['name'] == None or request.form['phone'] == "" or request.form['phone'] == None:
-        return render_template('index.html')
+    if request.form['name'] == "" or request.form['name'] == None \
+            or request.form['phone'] == "" or request.form['phone'] == None:
+        return render_template('notfound.html')
     else:
         name = request.form['name']
         phone = request.form['phone']
@@ -62,6 +57,10 @@ def index():
         session['eventid'] = eventid
         return redirect(url_for('two_factor_setup'))
 
+@app.route('/notfound')
+def notfound():
+    return render_template('notfound.html')
+
 @app.route('/eventregisteration', methods=['GET', 'POST'])
 def eventregisteration():
     form = EventForm()
@@ -70,8 +69,12 @@ def eventregisteration():
                           externalID=form.externalID.data)
         db.session.add(new_event)
         db.session.commit()
-        return redirect(url_for('index'))
+        return redirect(url_for('complete'))
     return render_template('event.html', form=form)
+
+@app.route('/complete')
+def complete():
+    return render_template('complete.html')
 
 @app.route('/two-factor-setup')
 def two_factor_setup():
@@ -82,7 +85,10 @@ def two_factor_setup():
 
 @app.route('/qrcode')
 def qrcode():
-    url = pyqrcode.create(url_for('login', _external=True))
+    user_token = session['token']
+    user_phone = session['phone']
+    user_name = session['name']
+    url = pyqrcode.create('http://ec2-52-14-223-254.us-east-2.compute.amazonaws.com/login?token=' + str(user_token) + '&phone=' + str(user_phone))
     stream = StringIO()
     url.svg(stream, scale=9)
     return stream.getvalue().encode('utf-8'), 200, {
@@ -96,8 +102,8 @@ def qrcode():
 def login():
     form = LoginForm()
     twilio_number = '16463625451'
-    to_number = session['phone']
-    sms_info = session['token']
+    to_number = request.args.get('phone')
+    sms_info = request.args.get('token')
     account_sid = 'AC7451e99f2a0cd5dff7233b17bb59203a'
     auth_token = 'dda90d9e299910ce9159cc9e08f715a3'
     client = Client(account_sid, auth_token)
